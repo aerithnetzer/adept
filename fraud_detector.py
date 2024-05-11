@@ -1,32 +1,23 @@
-# %%
 import requests
-import json
 import plotly.graph_objects as go
 import networkx as nx
-import nbformat
 
-# %%
 northwestern_data = requests.get("https://api.openalex.org/works?filter=institutions.id:I111979921")
 northwestern_data = northwestern_data.json()
 
-# %%
 urls = []
 for i in northwestern_data['results']:
     urls.append(i['id'])
 
 urls = [url.replace("https://", "https://api.") for url in urls]
-urls
 
-# %%
 graph = {}
 
-# %%
 def get_data(url):
     response = requests.get(url)
     data = response.json()
     return data
 
-# %%
 def add_data_to_graph(graph, data):
     for authorship in data['authorships']:
         author = authorship['author']['display_name']
@@ -36,22 +27,16 @@ def add_data_to_graph(graph, data):
             if other_author != author:
                 graph[author].append(other_author)
 
-# %%
 for i in range(len(urls)):
     data = get_data(urls[i])
     add_data_to_graph(graph, data)
 
-# %%
-graph
 
-# %%
 add_data_to_graph()
 
-# %%
 kelsey = get_data('https://api.openalex.org/works/W2899966731')
 kelsey_2= get_data('https://api.openalex.org/works/W3176337531')
 
-# %%
 graph = {}
 
 for authorship in kelsey['authorships']:
@@ -64,7 +49,6 @@ for authorship in kelsey['authorships']:
 
 graph
 
-# %%
 for authorship in kelsey_2['authorships']:
     author = authorship['author']['display_name']
     graph[author] = []
@@ -73,13 +57,6 @@ for authorship in kelsey_2['authorships']:
         if other_author != author:
             graph[author].append(other_author)
 
-graph
-
-# %%
-# Visualize the graph
-import networkx as nx
-import matplotlib.pyplot as plt
-import nbformat
 
 G = nx.Graph(graph)
 pos = nx.spring_layout(G)
@@ -118,48 +95,6 @@ fig.show()
 degree = dict(G.degree())
 sorted_degree = sorted(degree.items(), key=lambda x: x[1], reverse=True)
 print(sorted_degree)
-
 # Find the most connected node
 max_degree = max(degree, key=degree.get)
 print(max_degree)
-
-# %%
-import torch
-from torch_geometric.nn import GCNConv
-
-# %%
-class GCN(torch.nn.Module):
-    def __init__(self, num_features, num_classes):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(num_features, 16)
-        self.conv2 = GCNConv(16, num_classes)
-
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-
-        x = self.conv1(x, edge_index)
-        x = torch.relu(x)
-        x = torch.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
-
-        return torch.log_softmax(x, dim=1)
-
-# Instantiate the model
-model = GCN(num_features, num_classes)
-
-# Define a loss function
-criterion = torch.nn.CrossEntropyLoss()
-
-# Define an optimizer
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-
-# Training loop
-for epoch in range(200):
-    model.train()
-    optimizer.zero_grad()
-    out = model(data)
-    loss = criterion(out[data.train_mask], data.y[data.train_mask])
-    loss.backward()
-    optimizer.step()
-
-
